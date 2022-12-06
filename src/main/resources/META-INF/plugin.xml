@@ -1,18 +1,36 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.github.xukeek.struts</id>
-    <name>IntelliJ Platform Plugin struts</name>
+    <name>Struts</name>
     <vendor>xukeek</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.github.xukeek.struts.services.MyApplicationService"/>
         <projectService serviceImplementation="com.github.xukeek.struts.services.MyProjectService"/>
+        <psi.referenceContributor language="XML"
+                                  implementation="com.github.xukeek.struts.extensions.ResultFileReferenceContributor"/>
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.github.xukeek.struts.extensions.LineMarkerProvider"/>
+        <httpRequestHandler implementation="com.github.xukeek.struts.extensions.ChromeRestService"/>
+        <vfs.asyncListener implementation="com.github.xukeek.struts.extensions.StrutsFileChangeListener"/>
+        <searchEverywhereContributor
+                implementation="com.github.xukeek.struts.actions.StrutsActionSearchEverywhereContributor$Factory"/>
+        <notificationGroup displayType="BALLOON" id="intellij-struts"/>
     </extensions>
 
-    <applicationListeners>
+    <projectListeners>
         <listener class="com.github.xukeek.struts.listeners.MyProjectManagerListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
-    </applicationListeners>
+    </projectListeners>
+    <actions>
+        <action id="com.github.xukeek.action.SearchStrutsAction"
+                class="com.github.xukeek.struts.actions.FindStrutsAction"
+                text="Search Struts Action" description="Search by url">
+            <add-to-group group-id="SearchEverywhereActions" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl U"/>
+        </action>
+    </actions>
 </idea-plugin>
