@@ -7,7 +7,7 @@ import java.util.*
 
 object StrutsActionUtil {
     private val ANNOTATION_NAMES: MutableSet<String> = HashSet()
-    val STRUTS_ICON = IconLoader.getIcon("/icons/action_small.svg")
+    val STRUTS_ICON = IconLoader.getIcon("/icons/action_small.svg", javaClass)
 
     init {
         ANNOTATION_NAMES.add("com.rayse.plugins.core.trace.Trace")
