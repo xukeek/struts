@@ -2,9 +2,11 @@ package com.github.xukeek.struts.services
 
 import com.github.xukeek.struts.MyBundle
 import com.github.xukeek.struts.wrappers.ActionConfig
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 
+@Service(Service.Level.APP)
 class MyApplicationService {
 
     init {

@@ -1,5 +1,7 @@
 package com.github.xukeek.struts.utils
 
+import com.github.xukeek.struts.services.MyProjectService
+import com.github.xukeek.struts.wrappers.ActionConfig
 import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.*
 import com.intellij.psi.util.PsiUtil
@@ -15,7 +17,7 @@ object StrutsActionUtil {
         ANNOTATION_NAMES.add("com.rayse.plugins.auth.annotations.RightMethod")
     }
 
-    fun summarizeAllReturns(method: PsiMethod): Set<String> {
+    private fun summarizeAllReturns(method: PsiMethod): Set<String> {
         val methodReturns: MutableSet<String> = HashSet()
         val returnStatements = PsiUtil.findReturnStatements(method)
         Arrays.stream(returnStatements).forEach { s: PsiReturnStatement ->
@@ -62,6 +64,25 @@ object StrutsActionUtil {
                 method.parameterList.parametersCount == 0 &&
                 method.modifierList.annotations.isNotEmpty() &&
                 Arrays.stream(method.modifierList.annotations)
-                    .anyMatch { a: PsiAnnotation -> ANNOTATION_NAMES.contains(a.qualifiedName) }
+                        .anyMatch { a: PsiAnnotation -> ANNOTATION_NAMES.contains(a.qualifiedName) }
+    }
+
+    fun getAllFreemarkerFilesAboutThisMethod(method: PsiMethod): Array<PsiElement> {
+        val project = method.project
+        val projectService: MyProjectService = project.getService(MyProjectService::class.java)
+        val moduleActionConfigs: List<ActionConfig> = projectService.getActionConfigs()
+        val aboutFiles: MutableList<PsiElement> = ArrayList()
+        val psiClass: PsiClass? = method.containingClass
+        if (psiClass != null) {
+            val allMethodReturnStr: Set<String> = summarizeAllReturns(method)
+            val allMethodReturnFilePaths =
+                    moduleActionConfigs.filter { a -> a.className == psiClass.qualifiedName }
+                            .flatMap { a ->
+                                a.getResultConfigs().filter { c -> allMethodReturnStr.contains(c.name) }
+                            }
+                            .map { c -> c.viewPath }
+            aboutFiles.addAll(StrutsXmlUtil.getActionViewFiles(project, allMethodReturnFilePaths))
+        }
+        return aboutFiles.toTypedArray()
     }
 }

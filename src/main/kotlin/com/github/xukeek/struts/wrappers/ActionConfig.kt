@@ -10,10 +10,10 @@ import com.intellij.util.containers.stream
 import java.util.stream.Collectors
 
 class ActionConfig(
-    val xmlFile: XmlFile,
-    private val packageNameSpace: String,
-    private val name: String,
-    val className: String
+        val xmlFile: XmlFile,
+        private val packageNameSpace: String,
+        private val name: String,
+        val className: String
 ) {
     private val resultConfigs: MutableList<ResultConfig> = ArrayList()
 

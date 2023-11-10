@@ -1,6 +1,7 @@
 package com.github.xukeek.struts.extensions
 
 import com.github.xukeek.struts.services.MyApplicationService
+import com.github.xukeek.struts.utils.StrutsActionUtil
 import com.google.gson.stream.JsonWriter
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
@@ -8,6 +9,7 @@ import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.util.io.BufferExposingByteArrayOutputStream
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiDocumentManager
@@ -23,26 +25,31 @@ import java.io.IOException
 class ChromeRestService : RestService() {
 
     override fun execute(
-            urlDecoder: QueryStringDecoder,
-            request: FullHttpRequest,
-            context: ChannelHandlerContext
+        urlDecoder: QueryStringDecoder,
+        request: FullHttpRequest,
+        context: ChannelHandlerContext
     ): String? {
         val parameters = urlDecoder.parameters()
         val parameterAction = parameters["action"]
+        val parameterType = parameters["type"]
         var actionUrl = ""
+        var actionType = "action"
         if (parameterAction != null && parameterAction.size == 1) {
             actionUrl = getRequestURIFromURL(parameterAction[0])
         }
+        if (parameterType != null && parameterType.size == 1) {
+            actionType = parameterType[0]
+        }
         Notifications.Bus.notify(
-                Notification(
-                        "intellij-struts",
-                        "Open link..........",
-                        actionUrl,
-                        NotificationType.INFORMATION
-                )
+            Notification(
+                "intellij-struts",
+                "Open link..........",
+                actionUrl,
+                NotificationType.INFORMATION
+            )
         )
         if (StringUtils.isNotEmpty(actionUrl)) {
-            findActionAndOpenFile(actionUrl, request, context)
+            findActionAndOpenFile(actionUrl, actionType, request, context)
         }
         return null
     }
@@ -56,11 +63,16 @@ class ChromeRestService : RestService() {
     }
 
     override fun isSupported(request: FullHttpRequest): Boolean {
-        return true
+        return request.uri().contains("gmp") && request.uri().contains("action");
     }
 
     @Throws(IOException::class)
-    private fun findActionAndOpenFile(uri: String, request: FullHttpRequest, context: ChannelHandlerContext) {
+    private fun findActionAndOpenFile(
+        uri: String,
+        type: String,
+        request: FullHttpRequest,
+        context: ChannelHandlerContext
+    ) {
         val application = ApplicationManager.getApplication()
         val strutsService: MyApplicationService = application.getService(MyApplicationService::class.java)
         application.executeOnPooledThread {
@@ -68,24 +80,52 @@ class ChromeRestService : RestService() {
                 strutsService.findActionAndOpenIt(uri) { project, a ->
                     val byteOut = BufferExposingByteArrayOutputStream()
                     val actionClassFile = JavaPsiFacade.getInstance(project)
-                            .findClass(a.className, GlobalSearchScope.projectScope(project))
+                        .findClass(a.className, GlobalSearchScope.projectScope(project))
                     if (actionClassFile != null) {
                         val methodName = getRequestMethodFromURI(uri);
                         val m = actionClassFile.methods.first { m -> m.name == methodName }
-                        var lineNumber = 0
                         if (m != null) {
-                            val documentManager = PsiDocumentManager.getInstance(project)
-                            val document: Document? = documentManager.getDocument(actionClassFile.containingFile)
-                            if (document != null) {
-                                lineNumber = document.getLineNumber(m.textOffset)
+                            if (type == "action" || type == "actionTemplate") {
+                                var lineNumber = 0
+                                val documentManager = PsiDocumentManager.getInstance(project)
+                                val document: Document? = documentManager.getDocument(actionClassFile.containingFile)
+                                if (document != null) {
+                                    lineNumber = document.getLineNumber(m.textOffset)
+                                }
+                                ApplicationManager.getApplication().invokeLater(Runnable {
+                                    if (actionClassFile.containingFile?.virtualFile != null) {
+                                        OpenFileDescriptor(
+                                            project,
+                                            actionClassFile.containingFile?.virtualFile!!,
+                                            lineNumber,
+                                            1
+                                        ).navigate(true);
+                                    }
+                                })
+                            }
+                            if (type == "template" || type == "actionTemplate") {
+                                if (StrutsActionUtil.isStrutsMethod(m)) {
+                                    val module = ModuleUtil.findModuleForPsiElement(m)
+                                    if (module != null) {
+                                        val aboutFiles = StrutsActionUtil.getAllFreemarkerFilesAboutThisMethod(m)
+                                        if (aboutFiles.isNotEmpty()) {
+                                            for (aboutFile in aboutFiles) {
+                                                ApplicationManager.getApplication().invokeLater(Runnable {
+                                                    if (aboutFile.containingFile?.virtualFile != null) {
+                                                        OpenFileDescriptor(
+                                                            project,
+                                                            aboutFile.containingFile.virtualFile,
+                                                            0,
+                                                            1
+                                                        ).navigate(true);
+                                                    }
+                                                })
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                        ApplicationManager.getApplication().invokeLater(Runnable {
-                            //OpenFileAction.openFile(actionClassFile.containingFile?.virtualFile?.path.toString(), project);
-                            if (actionClassFile.containingFile?.virtualFile != null) {
-                                OpenFileDescriptor(project, actionClassFile.containingFile?.virtualFile!!, lineNumber, 1).navigate(true);
-                            }
-                        })
                         val writer: JsonWriter = createJsonWriter(byteOut)
                         writer.beginObject()
                         writer.name("info").value(actionClassFile.containingFile?.virtualFile?.path)

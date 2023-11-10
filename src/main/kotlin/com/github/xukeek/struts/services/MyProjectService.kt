@@ -3,6 +3,7 @@ package com.github.xukeek.struts.services
 import com.github.xukeek.struts.MyBundle
 import com.github.xukeek.struts.utils.StrutsXmlUtil
 import com.github.xukeek.struts.wrappers.ActionConfig
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
@@ -10,6 +11,7 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.xml.XmlFile
 
+@Service(Service.Level.PROJECT)
 class MyProjectService(private val project: Project) {
     private var fileCache: MutableMap<String, List<ActionConfig>> = mutableMapOf()
 

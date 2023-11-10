@@ -8,8 +8,6 @@
     <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.github.xukeek.struts.services.MyApplicationService"/>
-        <projectService serviceImplementation="com.github.xukeek.struts.services.MyProjectService"/>
         <psi.referenceContributor language="XML"
                                   implementation="com.github.xukeek.struts.extensions.ResultFileReferenceContributor"/>
         <codeInsight.lineMarkerProvider language="JAVA"
@@ -19,6 +17,8 @@
         <searchEverywhereContributor
                 implementation="com.github.xukeek.struts.actions.StrutsActionSearchEverywhereContributor$Factory"/>
         <notificationGroup displayType="BALLOON" id="intellij-struts"/>
+        <codeInsight.daemonBoundCodeVisionProvider
+                implementation="com.github.xukeek.struts.extensions.StrutsUrlCodeVisionProvider"/>
     </extensions>
 
     <projectListeners>
